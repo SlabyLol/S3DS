@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
-#include <vector>
+#include <sys/stat.h>
 
 #define GRID_WIDTH  32
 #define GRID_HEIGHT 20
@@ -17,6 +17,8 @@ struct Point {
 class SnakeGame {
 private:
     C3D_RenderTarget* top = nullptr;
+    C2D_TextBuf textBuf = nullptr;
+
     Point snake[400];
     int snakeLength = 3;
     Point food;
@@ -36,9 +38,10 @@ public:
     SnakeGame();
     ~SnakeGame();
     void initGame();
-    void update(u32 kDown, u32 kHeld, touchPosition touch);
+    void update(u32 kDown, touchPosition touch);
     void draw();
     void run();
+    void setTop(C3D_RenderTarget* t) { top = t; }
 };
 
 void SnakeGame::loadHighscore() {
@@ -60,13 +63,14 @@ void SnakeGame::saveHighscore() {
 
 void SnakeGame::playSound(int freq) {
     u8* buffer = (u8*)linearAlloc(4096);
+    if (!buffer) return;
     for (int i = 0; i < 2048; i++) {
         buffer[i] = (i % freq < freq/2) ? 180 : 40;
     }
     ndspWaveBuf waveBuf = {};
     waveBuf.data_vaddr = buffer;
     waveBuf.nsamples = 2048;
-    NDSP_ChnWaveBufAdd(0, &waveBuf);
+    ndspChnWaveBufAdd(0, &waveBuf);
 }
 
 SnakeGame::SnakeGame() {
@@ -77,6 +81,7 @@ SnakeGame::SnakeGame() {
 
 SnakeGame::~SnakeGame() {
     saveHighscore();
+    if (textBuf) C2D_TextBufDelete(textBuf);
 }
 
 void SnakeGame::initGame() {
@@ -91,7 +96,7 @@ void SnakeGame::initGame() {
     food = {rand() % (GRID_WIDTH-2) + 1, rand() % (GRID_HEIGHT-2) + 1};
 }
 
-void SnakeGame::update(u32 kDown, u32 kHeld, touchPosition touch) {
+void SnakeGame::update(u32 kDown, touchPosition touch) {
     if (inMenu) {
         if (kDown & KEY_A) {
             inMenu = false;
@@ -99,7 +104,6 @@ void SnakeGame::update(u32 kDown, u32 kHeld, touchPosition touch) {
         }
         return;
     }
-
     if (gameOver) {
         if (kDown & KEY_A) {
             saveHighscore();
@@ -108,7 +112,7 @@ void SnakeGame::update(u32 kDown, u32 kHeld, touchPosition touch) {
         return;
     }
 
-    // Touchscreen
+    // Touch + D-Pad Steuerung
     if (kDown & KEY_TOUCH) {
         if (touch.px > 180 && dx != -1) { dx = 1; dy = 0; }
         else if (touch.px < 140 && dx != 1) { dx = -1; dy = 0; }
@@ -116,16 +120,14 @@ void SnakeGame::update(u32 kDown, u32 kHeld, touchPosition touch) {
         else if (touch.py < 100 && dy != 1) { dx = 0; dy = -1; }
     }
 
-    // D-Pad
     if (kDown & KEY_RIGHT && dx != -1) { dx = 1; dy = 0; }
-    if (kDown & KEY_LEFT  && dx !=  1) { dx = -1; dy = 0; }
-    if (kDown & KEY_UP    && dy !=  1) { dx = 0; dy = -1; }
+    if (kDown & KEY_LEFT  && dx != 1)  { dx = -1; dy = 0; }
+    if (kDown & KEY_UP    && dy != 1)  { dx = 0; dy = -1; }
     if (kDown & KEY_DOWN  && dy != -1) { dx = 0; dy = 1; }
 
     if (frame % speed == 0) {
         Point head = {snake[0].x + dx, snake[0].y + dy};
 
-        // Kollision
         if (head.x < 0 || head.x >= GRID_WIDTH || head.y < 0 || head.y >= GRID_HEIGHT)
             gameOver = true;
 
@@ -134,12 +136,10 @@ void SnakeGame::update(u32 kDown, u32 kHeld, touchPosition touch) {
                 gameOver = true;
         }
 
-        // Schlange bewegen
         for (int i = snakeLength - 1; i > 0; i--)
             snake[i] = snake[i-1];
         snake[0] = head;
 
-        // Futter
         if (snake[0].x == food.x && snake[0].y == food.y) {
             score += 10;
             snakeLength++;
@@ -158,14 +158,15 @@ void SnakeGame::draw() {
     C2D_SceneBegin(top);
 
     if (inMenu) {
-        C2D_DrawText("S3DS SNAKE", C2D_AlignCenter, 200, 60, 0, 1.3f, 1.3f, C2D_Color32(0, 255, 120, 255));
-        C2D_DrawText("Drücke A zum Starten", C2D_AlignCenter, 200, 130, 0, 0.75f, 0.75f, C2D_Color32(255,255,255,255));
+        C2D_DrawText(textBuf, "S3DS SNAKE", C2D_AlignCenter, 200, 60, 0, 1.3f, 1.3f, C2D_Color32(0, 255, 120, 255));
+        C2D_DrawText(textBuf, "Drücke A zum Starten", C2D_AlignCenter, 200, 130, 0, 0.75f, 0.75f, C2D_Color32(255,255,255,255));
+        
         char hs[64];
         snprintf(hs, sizeof(hs), "Highscore: %d", highscore);
-        C2D_DrawText(hs, C2D_AlignCenter, 200, 170, 0, 0.7f, 0.7f, C2D_Color32(255, 215, 0, 255));
+        C2D_DrawText(textBuf, hs, C2D_AlignCenter, 200, 170, 0, 0.7f, 0.7f, C2D_Color32(255, 215, 0, 255));
     } 
     else {
-        // Schlange zeichnen
+        // Schlange
         for (int i = 0; i < snakeLength; i++) {
             u32 color = (i == 0) ? C2D_Color32(0, 255, 120, 255) : C2D_Color32(0, 200, 90, 255);
             C2D_DrawRectSolid(snake[i].x * CELL_SIZE + 8, snake[i].y * CELL_SIZE + 8, 0, CELL_SIZE-2, CELL_SIZE-2, color);
@@ -177,12 +178,12 @@ void SnakeGame::draw() {
         // Score
         char buf[80];
         snprintf(buf, sizeof(buf), "Score: %d   High: %d", score, highscore);
-        C2D_DrawText(buf, C2D_AlignLeft, 20, 12, 0, 0.65f, 0.65f, C2D_Color32(255,255,255,255));
+        C2D_DrawText(textBuf, buf, C2D_AlignLeft, 20, 12, 0, 0.65f, 0.65f, C2D_Color32(255,255,255,255));
 
         if (gameOver) {
             C2D_DrawRectSolid(70, 75, 0, 260, 90, C2D_Color32(0,0,0,200));
-            C2D_DrawText("GAME OVER", C2D_AlignCenter, 200, 90, 0, 1.1f, 1.1f, C2D_Color32(255, 60, 60, 255));
-            C2D_DrawText("A = Neustart", C2D_AlignCenter, 200, 125, 0, 0.7f, 0.7f, C2D_Color32(255,255,255,255));
+            C2D_DrawText(textBuf, "GAME OVER", C2D_AlignCenter, 200, 90, 0, 1.1f, 1.1f, C2D_Color32(255, 60, 60, 255));
+            C2D_DrawText(textBuf, "A = Neustart", C2D_AlignCenter, 200, 125, 0, 0.7f, 0.7f, C2D_Color32(255,255,255,255));
         }
     }
 }
@@ -196,7 +197,7 @@ void SnakeGame::run() {
 
         if (kDown & KEY_START) break;
 
-        update(kDown, hidKeysHeld(), touch);
+        update(kDown, touch);
         draw();
 
         C3D_FrameEnd(0);
@@ -209,18 +210,19 @@ int main(int argc, char** argv) {
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
-    NDSP_Init();
-    NDSP_SetOutputMode(NDSP_OUTPUT_STEREO);
+    ndspInit();
+    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 
     SnakeGame game;
-    game.top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+    game.setTop(C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT));
+    game.textBuf = C2D_TextBufNew(4096);
 
     mkdir("sdmc:/3ds", 0777);
     mkdir("sdmc:/3ds/S3DS", 0777);
 
     game.run();
 
-    NDSP_Fini();
+    ndspFini();
     C2D_Fini();
     C3D_Fini();
     gfxExit();
