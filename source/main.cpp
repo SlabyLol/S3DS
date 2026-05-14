@@ -32,7 +32,6 @@ private:
 
     void loadHighscore();
     void saveHighscore();
-    void playSound(int freq);
 
 public:
     SnakeGame();
@@ -60,18 +59,6 @@ void SnakeGame::saveHighscore() {
         fprintf(f, "%d", highscore);
         fclose(f);
     }
-}
-
-void SnakeGame::playSound(int freq) {
-    u8* buffer = (u8*)linearAlloc(4096);
-    if (!buffer) return;
-    for (int i = 0; i < 2048; i++) {
-        buffer[i] = (i % freq < freq/2) ? 180 : 40;
-    }
-    ndspWaveBuf waveBuf = {};
-    waveBuf.data_vaddr = buffer;
-    waveBuf.nsamples = 2048;
-    ndspChnWaveBufAdd(0, &waveBuf);
 }
 
 SnakeGame::SnakeGame() {
@@ -113,6 +100,7 @@ void SnakeGame::update(u32 kDown, touchPosition touch) {
         return;
     }
 
+    // Steuerung
     if (kDown & KEY_TOUCH) {
         if (touch.px > 180 && dx != -1) { dx = 1; dy = 0; }
         else if (touch.px < 140 && dx != 1) { dx = -1; dy = 0; }
@@ -145,9 +133,6 @@ void SnakeGame::update(u32 kDown, touchPosition touch) {
             snakeLength++;
             if (speed > 3) speed--;
             food = {rand() % (GRID_WIDTH-2) + 1, rand() % (GRID_HEIGHT-2) + 1};
-            playSound(8);
-        } else {
-            playSound(25);
         }
     }
     frame++;
@@ -175,13 +160,16 @@ void SnakeGame::draw() {
         C2D_DrawText(&text, C2D_AlignCenter | C2D_WithColor, 200, 170, 0, 0.7f, 0.7f, C2D_Color32(255, 215, 0, 255));
     } 
     else {
+        // Schlange
         for (int i = 0; i < snakeLength; i++) {
             u32 color = (i == 0) ? C2D_Color32(0, 255, 120, 255) : C2D_Color32(0, 200, 90, 255);
             C2D_DrawRectSolid(snake[i].x * CELL_SIZE + 8, snake[i].y * CELL_SIZE + 8, 0, CELL_SIZE-2, CELL_SIZE-2, color);
         }
 
+        // Futter
         C2D_DrawRectSolid(food.x * CELL_SIZE + 8, food.y * CELL_SIZE + 8, 0, CELL_SIZE-2, CELL_SIZE-2, C2D_Color32(255, 70, 70, 255));
 
+        // Score
         char buf[80];
         snprintf(buf, sizeof(buf), "Score: %d   High: %d", score, highscore);
         C2D_TextParse(&text, textBuf, buf);
@@ -224,9 +212,6 @@ int main(int argc, char** argv) {
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
-    
-    ndspInit();
-    ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 
     SnakeGame game;
     game.setTop(C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT));
@@ -239,8 +224,6 @@ int main(int argc, char** argv) {
 
     game.run();
 
-    // Cleanup
-    ndspExit();           // ← Hier war der Fehler
     C2D_Fini();
     C3D_Fini();
     gfxExit();
