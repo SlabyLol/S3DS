@@ -9,35 +9,29 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
-      env:
-        DEVKITPRO: /opt/devkitpro
-        DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install 3DS development packages
+      - name: Install devkitPro
         run: |
-          dkp-pacman -Sy --noconfirm
-          dkp-pacman -S --noconfirm 3ds-dev
+          wget https://apt.devkitpro.org/install-devkitpro-pacman
+          chmod +x ./install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman
+          sudo dkp-pacman -Syu --noconfirm
+          sudo dkp-pacman -S --noconfirm 3ds-dev
 
-      - name: PATH setzen
-        run: echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
+      - name: Build Snake
+        run: make
 
-      - name: Build Project
-        run: make -j2
-
-      - name: Show build result
+      - name: Show files
         run: |
-          echo "=== Files in directory ==="
           ls -la
           echo "=== Build files ==="
           find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh"
 
-      - name: Upload Artifact
+      - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
           name: S3DS-Snake
