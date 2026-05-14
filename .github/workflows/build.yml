@@ -2,9 +2,7 @@ name: Build 3DS Snake
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -13,57 +11,47 @@ jobs:
 
     container:
       image: devkitpro/devkitarm:20240202
-      env:
-        DEVKITPRO: /opt/devkitpro
-        DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PATH
-        run: |
-          echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Update Packages
-        run: |
-          dkp-pacman -Sy --noconfirm
-
-      - name: Install Required Libraries
-        run: |
-          dkp-pacman -S --noconfirm \
-            libctru \
-            citro2d \
-            citro3d
-
-      - name: Verify Environment
-        run: |
-          echo "DEVKITPRO=$DEVKITPRO"
-          echo "DEVKITARM=$DEVKITARM"
-          which arm-none-eabi-g++
-          ls /opt/devkitpro
-          ls /opt/devkitpro/devkitARM
-
       - name: Build
-        run: |
-          make
+        run: make
 
-      - name: Show Output Files
-        run: |
-          find . -type f \( \
-            -name "*.3dsx" -o \
-            -name "*.elf" -o \
-            -name "*.cia" -o \
-            -name "*.smdh" \
-          \)
-
-      - name: Upload Build
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: snake3ds-build
+          name: snake3ds
           path: |
             **/*.3dsx
             **/*.elf
-            **/*.cia
+            **/*.smdhname: Build 3DS Snake
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: devkitpro/devkitarm:20240202
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: make
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: snake3ds
+          path: |
+            **/*.3dsx
+            **/*.elf
             **/*.smdh
-          if-no-files-found: error
