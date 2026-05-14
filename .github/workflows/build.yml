@@ -1,0 +1,43 @@
+name: Build S3DS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:20240202
+      env:
+        DEVKITPRO: /opt/devkitpro
+        DEVKITARM: /opt/devkitpro/devkitARM
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: PATH setzen
+        run: |
+          echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Build project
+        run: make
+
+      - name: Build-Ausgabe prüfen
+        run: |
+          echo "=== Verzeichnis ==="
+          ls -la
+          echo "=== .3dsx suchen ==="
+          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh" 2>/dev/null
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: S3DSbuild
+          path: |
+            ${{ github.workspace }}/*.3dsx
+            ${{ github.workspace }}/*.smdh
+            ${{ github.workspace }}/*.elf
+          if-no-files-found: error
