@@ -1,8 +1,10 @@
-TARGET  := snake3ds
-BUILD   := build
+TARGET := snake3ds
+BUILD := build
 SOURCES := .
-INCLUDES :=
+INCLUDES := .
 
-LIBRARIES := -lcitro2d -lcitro3d
+ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
-include $(DEVKITPRO)/3ds_rules
+LIBS := -lcitro2d -lcitro3d
+
+include $(DEVKITPRO)/libctru/3ds_rules
