@@ -15,9 +15,13 @@ CFLAGS	:=	-g -Wall -O2 $(ARCH)
 
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
-LDFLAGS := -specs=3dsx.specs -g $(ARCH)
+LIBDIRS := \
+	-L$(DEVKITPRO)/libctru/lib \
+	-L$(DEVKITPRO)/portlibs/3ds/lib
 
-LIBS	:= -lcitro2d -lcitro3d -lctru -lm
+LDFLAGS := -specs=3dsx.specs -g $(ARCH) $(LIBDIRS)
+
+LIBS	:=	-lcitro2d -lcitro3d -lctru -lm
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
@@ -29,10 +33,17 @@ export VPATH	:=	$(CURDIR)
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 CPPFILES	:=	$(notdir $(wildcard *.cpp))
+CFILES		:=	$(notdir $(wildcard *.c))
+SFILES		:=	$(notdir $(wildcard *.s))
 
-export OFILES	:=	$(CPPFILES:.cpp=.o)
+export OFILES	:=	$(CPPFILES:.cpp=.o) \
+					$(CFILES:.c=.o) \
+					$(SFILES:.s=.o)
 
-export INCLUDE	:=	-I$(CURDIR)
+export INCLUDE	:= \
+	-I$(CURDIR) \
+	-I$(DEVKITPRO)/libctru/include \
+	-I$(DEVKITPRO)/portlibs/3ds/include
 
 .PHONY: all clean
 
@@ -43,7 +54,11 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	rm -rf $(BUILD) *.3dsx *.elf *.smdh
+	rm -rf $(BUILD)
+	rm -f *.3dsx
+	rm -f *.elf
+	rm -f *.cia
+	rm -f *.smdh
 
 else
 
@@ -52,10 +67,20 @@ DEPENDS := $(OFILES:.o=.d)
 $(OUTPUT).3dsx: $(OUTPUT).elf
 
 $(OUTPUT).elf: $(OFILES)
+	@echo linking $(notdir $@)
 	$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
 %.o: %.cpp
-	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) -c $< -o $@
+	@echo compiling $<
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+
+%.o: %.c
+	@echo compiling $<
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) $(INCLUDE) -c $< -o $@
+
+%.o: %.s
+	@echo assembling $<
+	$(AS) $(ARCH) -c $< -o $@
 
 -include $(DEPENDS)
 
