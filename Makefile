@@ -6,42 +6,64 @@ include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	snake3ds
 BUILD		:=	build
+
+# main.cpp liegt in source/
 SOURCES		:=	source
-INCLUDES	:=	.
+
+# Header liegen optional in include/
+INCLUDES	:=	include
 
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp -mtp=soft
 
 CFLAGS	:=	-g -Wall -O2 $(ARCH)
 
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
+CXXFLAGS := $(CFLAGS) \
+			-fno-rtti \
+			-fno-exceptions \
+			-std=gnu++11
 
 LIBDIRS := \
 	-L$(DEVKITPRO)/libctru/lib \
 	-L$(DEVKITPRO)/portlibs/3ds/lib
 
-LDFLAGS := -specs=3dsx.specs -g $(ARCH) $(LIBDIRS)
+LDFLAGS := \
+	-specs=3dsx.specs \
+	-g \
+	$(ARCH) \
+	$(LIBDIRS)
 
-LIBS	:=	-lcitro2d -lcitro3d -lctru -lm
+LIBS := \
+	-lcitro2d \
+	-lcitro3d \
+	-lctru \
+	-lm
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
 
-export VPATH	:=	$(CURDIR)
+export VPATH := \
+	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export DEPSDIR := $(CURDIR)/$(BUILD)
 
-CPPFILES	:=	$(notdir $(wildcard *.cpp))
-CFILES		:=	$(notdir $(wildcard *.c))
-SFILES		:=	$(notdir $(wildcard *.s))
+CPPFILES := \
+	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 
-export OFILES	:=	$(CPPFILES:.cpp=.o) \
-					$(CFILES:.c=.o) \
-					$(SFILES:.s=.o)
+CFILES := \
+	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 
-export INCLUDE	:= \
-	-I$(CURDIR) \
+SFILES := \
+	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+export OFILES := \
+	$(CPPFILES:.cpp=.o) \
+	$(CFILES:.c=.o) \
+	$(SFILES:.s=.o)
+
+export INCLUDE := \
+	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 	-I$(DEVKITPRO)/libctru/include \
 	-I$(DEVKITPRO)/portlibs/3ds/include
 
@@ -72,11 +94,13 @@ $(OUTPUT).elf: $(OFILES)
 
 %.o: %.cpp
 	@echo compiling $<
-	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d \
+	$(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o: %.c
 	@echo compiling $<
-	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) $(INCLUDE) -c $< -o $@
+	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d \
+	$(CFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o: %.s
 	@echo assembling $<
