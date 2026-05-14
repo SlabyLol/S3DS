@@ -42,6 +42,7 @@ public:
     void draw();
     void run();
     void setTop(C3D_RenderTarget* t) { top = t; }
+    void setTextBuf(C2D_TextBuf buf) { textBuf = buf; }
 };
 
 void SnakeGame::loadHighscore() {
@@ -112,7 +113,6 @@ void SnakeGame::update(u32 kDown, touchPosition touch) {
         return;
     }
 
-    // Steuerung (Touch + D-Pad)
     if (kDown & KEY_TOUCH) {
         if (touch.px > 180 && dx != -1) { dx = 1; dy = 0; }
         else if (touch.px < 140 && dx != 1) { dx = -1; dy = 0; }
@@ -175,16 +175,13 @@ void SnakeGame::draw() {
         C2D_DrawText(&text, C2D_AlignCenter | C2D_WithColor, 200, 170, 0, 0.7f, 0.7f, C2D_Color32(255, 215, 0, 255));
     } 
     else {
-        // Schlange
         for (int i = 0; i < snakeLength; i++) {
             u32 color = (i == 0) ? C2D_Color32(0, 255, 120, 255) : C2D_Color32(0, 200, 90, 255);
             C2D_DrawRectSolid(snake[i].x * CELL_SIZE + 8, snake[i].y * CELL_SIZE + 8, 0, CELL_SIZE-2, CELL_SIZE-2, color);
         }
 
-        // Futter
         C2D_DrawRectSolid(food.x * CELL_SIZE + 8, food.y * CELL_SIZE + 8, 0, CELL_SIZE-2, CELL_SIZE-2, C2D_Color32(255, 70, 70, 255));
 
-        // Score
         char buf[80];
         snprintf(buf, sizeof(buf), "Score: %d   High: %d", score, highscore);
         C2D_TextParse(&text, textBuf, buf);
@@ -232,7 +229,9 @@ int main(int argc, char** argv) {
 
     SnakeGame game;
     game.setTop(C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT));
-    game.textBuf = C2D_TextBufNew(4096);   // Wichtig!
+    
+    C2D_TextBuf buf = C2D_TextBufNew(4096);
+    game.setTextBuf(buf);
 
     mkdir("sdmc:/3ds", 0777);
     mkdir("sdmc:/3ds/S3DS", 0777);
