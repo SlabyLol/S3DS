@@ -1,13 +1,16 @@
-name: Build S3DS
+name: Build 3DS Snake
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     container:
       image: devkitpro/devkitarm:20240202
       env:
@@ -15,29 +18,48 @@ jobs:
         DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: PATH setzen
+      - name: Setup PATH
         run: |
           echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Build project
-        run: make
-
-      - name: Build-Ausgabe prüfen
+      - name: Update pacman
         run: |
-          echo "=== Verzeichnis ==="
-          ls -la
-          echo "=== .3dsx suchen ==="
-          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh" 2>/dev/null
+          dkp-pacman -Sy --noconfirm
 
-      - name: Upload artifact
+      - name: Install 3DS Libraries
+        run: |
+          dkp-pacman -S --noconfirm \
+            3ds-dev \
+            3ds-citro2d \
+            3ds-citro3d
+
+      - name: Show Environment
+        run: |
+          echo "DEVKITPRO=$DEVKITPRO"
+          echo "DEVKITARM=$DEVKITARM"
+          which arm-none-eabi-g++
+          ls /opt/devkitpro
+          ls /opt/devkitpro/devkitARM
+
+      - name: Build Project
+        run: |
+          make
+
+      - name: Show Build Files
+        run: |
+          echo "=== BUILD OUTPUT ==="
+          find . -type f \( -name "*.3dsx" -o -name "*.elf" -o -name "*.cia" -o -name "*.smdh" \)
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: S3DSbuild
+          name: snake3ds-build
           path: |
-            ${{ github.workspace }}/*.3dsx
-            ${{ github.workspace }}/*.smdh
-            ${{ github.workspace }}/*.elf
+            **/*.3dsx
+            **/*.elf
+            **/*.cia
+            **/*.smdh
           if-no-files-found: error
