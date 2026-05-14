@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: devkitpro/devkitarm:latest     # ← Aktuelles stabiles Tag
+      image: devkitpro/devkitarm:latest
       env:
         DEVKITPRO: /opt/devkitpro
         DEVKITARM: /opt/devkitpro/devkitARM
@@ -19,6 +19,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install 3DS packages
+        run: |
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm 3ds-dev 3ds-citro3d 3ds-citro2d
+
       - name: PATH setzen
         run: |
           echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
@@ -26,12 +31,10 @@ jobs:
       - name: Build project
         run: make
 
-      - name: Build-Ausgabe prüfen
+      - name: Show build files
         run: |
-          echo "=== Verzeichnis ==="
           ls -la
-          echo "=== Gefundene Build-Dateien ==="
-          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh" 2>/dev/null || echo "Keine Dateien gefunden"
+          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
