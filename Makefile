@@ -6,7 +6,7 @@ include $(DEVKITARM)/3ds_rules
 
 TARGET		:=	snake3ds
 BUILD		:=	build
-SOURCES		:=	.
+SOURCES		:=	source
 INCLUDES	:=	.
 
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp -mtp=soft
