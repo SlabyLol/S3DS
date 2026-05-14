@@ -1,110 +1,91 @@
+# =============================================
+# S3DS Snake - Nintendo 3DS Homebrew
+# =============================================
+
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment.")
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=/path/to/devkitARM")
 endif
 
 include $(DEVKITARM)/3ds_rules
 
-TARGET		:=	snake3ds
-BUILD		:=	build
+# ==================== Projekt-Infos ====================
+APP_TITLE     := S3DS Snake
+APP_AUTHOR    := DarkFox Co.
+APP_VERSION   := 1.2.0
+APP_PRODUCT_CODE := CTR-P-SNAK
+APP_UNIQUE_ID := 0x534E414B  # SNAK
 
-# main.cpp liegt in source/
-SOURCES		:=	source
+TARGET        := snake
+BUILD         := build
+SOURCES       := source
+INCLUDES      := include
 
-# Header liegen optional in include/
-INCLUDES	:=	include
+# ==================== Flags ====================
+ARCH      := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp -mtp=soft
 
-ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mfpu=vfp -mtp=soft
+CFLAGS    := -g -Wall -O2 $(ARCH)
+CXXFLAGS  := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++17
 
-CFLAGS	:=	-g -Wall -O2 $(ARCH)
+LIBDIRS   := -L$(DEVKITPRO)/libctru/lib
 
-CXXFLAGS := $(CFLAGS) \
-			-fno-rtti \
-			-fno-exceptions \
-			-std=gnu++11
+LIBS      := -lctru -lcitro2d -lcitro3d -lndsp -lm
 
-LIBDIRS := \
-	-L$(DEVKITPRO)/libctru/lib \
-	-L$(DEVKITPRO)/portlibs/3ds/lib
+LDFLAGS   := -specs=3dsx.specs -g $(ARCH) $(LIBDIRS)
 
-LDFLAGS := \
-	-specs=3dsx.specs \
-	-g \
-	$(ARCH) \
-	$(LIBDIRS)
-
-LIBS := \
-	-lcitro2d \
-	-lcitro3d \
-	-lctru \
-	-lm
-
+# ==================== Dateien ====================
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-export TOPDIR	:=	$(CURDIR)
-
-export VPATH := \
-	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export OUTPUT := $(CURDIR)/$(TARGET)
+export TOPDIR := $(CURDIR)
+export VPATH  := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
-CPPFILES := \
-	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+CFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 
-CFILES := \
-	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 
-SFILES := \
-	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-
-export OFILES := \
-	$(CPPFILES:.cpp=.o) \
-	$(CFILES:.c=.o) \
-	$(SFILES:.s=.o)
-
-export INCLUDE := \
-	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-	-I$(DEVKITPRO)/libctru/include \
-	-I$(DEVKITPRO)/portlibs/3ds/include
+export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+                  -I$(DEVKITPRO)/libctru/include
 
 .PHONY: all clean
 
 all: $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
-	rm -rf $(BUILD)
-	rm -f *.3dsx
-	rm -f *.elf
-	rm -f *.cia
-	rm -f *.smdh
+	@echo "Cleaning..."
+	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh *.cia
 
 else
 
+# ==================== Build-Regeln ====================
 DEPENDS := $(OFILES:.o=.d)
 
-$(OUTPUT).3dsx: $(OUTPUT).elf
+$(OUTPUT).3dsx : $(OUTPUT).elf
+	@echo "Creating 3DSX..."
+	@3dsxtool $< $@ --smdh=$(TOPDIR)/$(TARGET).smdh
 
-$(OUTPUT).elf: $(OFILES)
-	@echo linking $(notdir $@)
-	$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
+$(OUTPUT).elf : $(OFILES)
+	@echo "Linking $(notdir $@)"
+	@$(CXX) $(LDFLAGS) $(OFILES) $(LIBS) -o $@
 
 %.o: %.cpp
-	@echo compiling $<
-	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d \
-	$(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	@echo "Compiling $<"
+	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o: %.c
-	@echo compiling $<
-	$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d \
-	$(CFLAGS) $(INCLUDE) -c $< -o $@
+	@echo "Compiling $<"
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o: %.s
-	@echo assembling $<
-	$(AS) $(ARCH) -c $< -o $@
+	@echo "Assembling $<"
+	@$(AS) $(ARCH) -c $< -o $@
 
 -include $(DEPENDS)
 
