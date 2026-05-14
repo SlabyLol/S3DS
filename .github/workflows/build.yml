@@ -16,38 +16,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build
+      - name: Build project
         run: make
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: snake3ds
-          path: |
-            **/*.3dsx
-            **/*.elf
-            **/*.smdhname: Build 3DS Snake
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    container:
-      image: devkitpro/devkitarm:20240202
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build
-        run: make
-
-      - name: Upload
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: snake3ds
