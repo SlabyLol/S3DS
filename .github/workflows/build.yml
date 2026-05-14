@@ -10,21 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro
-        uses: devkitPro/setup-devkitpro-action@v1
-
-      - name: Install 3DS Development Packages
+      - name: Setup devkitPro (3DS)
         run: |
+          wget https://apt.devkitpro.org/install-devkitpro-pacman
+          chmod +x ./install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman
           sudo dkp-pacman -Syu --noconfirm
           sudo dkp-pacman -S --noconfirm 3ds-dev 3ds-citro3d 3ds-citro2d
 
-      - name: Build Project
+      - name: Build
         run: make
 
-      - name: Upload Build Artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: S3DS-Snake
