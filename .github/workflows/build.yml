@@ -18,25 +18,25 @@ jobs:
         DEVKITARM: /opt/devkitpro/devkitARM
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup PATH
         run: |
           echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Update pacman
+      - name: Update Packages
         run: |
           dkp-pacman -Sy --noconfirm
 
-      - name: Install 3DS Libraries
+      - name: Install Required Libraries
         run: |
           dkp-pacman -S --noconfirm \
-            3ds-dev \
-            3ds-citro2d \
-            3ds-citro3d
+            libctru \
+            citro2d \
+            citro3d
 
-      - name: Show Environment
+      - name: Verify Environment
         run: |
           echo "DEVKITPRO=$DEVKITPRO"
           echo "DEVKITARM=$DEVKITARM"
@@ -44,16 +44,20 @@ jobs:
           ls /opt/devkitpro
           ls /opt/devkitpro/devkitARM
 
-      - name: Build Project
+      - name: Build
         run: |
           make
 
-      - name: Show Build Files
+      - name: Show Output Files
         run: |
-          echo "=== BUILD OUTPUT ==="
-          find . -type f \( -name "*.3dsx" -o -name "*.elf" -o -name "*.cia" -o -name "*.smdh" \)
+          find . -type f \( \
+            -name "*.3dsx" -o \
+            -name "*.elf" -o \
+            -name "*.cia" -o \
+            -name "*.smdh" \
+          \)
 
-      - name: Upload Artifacts
+      - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
           name: snake3ds-build
