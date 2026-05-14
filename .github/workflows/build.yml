@@ -1,29 +1,33 @@
-name: Build 3DS Snake
+name: Build S3DS Snake
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main, master ]
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    container:
-      image: devkitpro/devkitarm:20240202
-
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build project
+      - name: Setup devkitPro
+        uses: devkitPro/setup-devkitpro-action@v1
+
+      - name: Install 3DS Development Packages
+        run: |
+          sudo dkp-pacman -Syu --noconfirm
+          sudo dkp-pacman -S --noconfirm 3ds-dev 3ds-citro3d 3ds-citro2d
+
+      - name: Build Project
         run: make
 
-      - name: Upload artifact
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: snake3ds
+          name: S3DS-Snake
           path: |
-            **/*.3dsx
-            **/*.elf
-            **/*.smdh
+            snake.3dsx
+            snake.elf
