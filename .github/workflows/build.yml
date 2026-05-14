@@ -19,20 +19,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Initialize devkitPro pacman + Install 3DS tools
+      - name: Install 3DS development packages
         run: |
-          # Schlüssel und Repos initialisieren
           dkp-pacman -Sy --noconfirm
-          dkp-pacman -S --noconfirm --needed 3ds-dev 3ds-citro3d 3ds-citro2d
+          dkp-pacman -S --noconfirm 3ds-dev
 
       - name: PATH setzen
         run: echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Build
+      - name: Build Project
         run: make -j2
 
-      - name: Show output
+      - name: Show build result
         run: |
+          echo "=== Files in directory ==="
           ls -la
           echo "=== Build files ==="
           find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh"
