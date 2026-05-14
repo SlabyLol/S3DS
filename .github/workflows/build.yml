@@ -19,29 +19,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install 3DS packages
+      - name: Initialize devkitPro pacman + Install 3DS tools
         run: |
-          dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm 3ds-dev 3ds-citro3d 3ds-citro2d
+          # Schlüssel und Repos initialisieren
+          dkp-pacman -Sy --noconfirm
+          dkp-pacman -S --noconfirm --needed 3ds-dev 3ds-citro3d 3ds-citro2d
 
       - name: PATH setzen
-        run: |
-          echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Build project
-        run: make
+      - name: Build
+        run: make -j2
 
-      - name: Show build files
+      - name: Show output
         run: |
           ls -la
+          echo "=== Build files ==="
           find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh"
 
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: S3DS-Snake
           path: |
             snake.3dsx
             snake.elf
-            snake.smdh
           if-no-files-found: error
