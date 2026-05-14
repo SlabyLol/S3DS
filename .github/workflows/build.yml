@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: devkitpro/devkitarm:20250101   # Neuere Version
+      image: devkitpro/devkitarm:latest     # ← Aktuelles stabiles Tag
       env:
         DEVKITPRO: /opt/devkitpro
         DEVKITARM: /opt/devkitpro/devkitARM
@@ -19,26 +19,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install additional packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-
       - name: PATH setzen
         run: |
           echo "PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Build Project
+      - name: Build project
         run: make
 
       - name: Build-Ausgabe prüfen
         run: |
-          echo "=== Verzeichnis Inhalt ==="
+          echo "=== Verzeichnis ==="
           ls -la
-          echo "=== Gefundene Dateien ==="
-          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh" -o -name "*.cia" 2>/dev/null || echo "Keine Build-Dateien gefunden"
+          echo "=== Gefundene Build-Dateien ==="
+          find . -name "*.3dsx" -o -name "*.elf" -o -name "*.smdh" 2>/dev/null || echo "Keine Dateien gefunden"
 
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: S3DS-Snake
