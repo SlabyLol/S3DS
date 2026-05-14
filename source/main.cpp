@@ -224,6 +224,7 @@ int main(int argc, char** argv) {
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
+    
     ndspInit();
     ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 
@@ -238,7 +239,8 @@ int main(int argc, char** argv) {
 
     game.run();
 
-    ndspFini();
+    // Cleanup
+    ndspExit();           // ← Hier war der Fehler
     C2D_Fini();
     C3D_Fini();
     gfxExit();
